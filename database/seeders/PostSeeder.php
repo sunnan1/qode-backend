@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Post;
 use App\Models\User;
+use App\Services\ElasticsearchService;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -19,11 +20,12 @@ class PostSeeder extends Seeder
         $batchSize = 1000;
         $totalPosts = 200000;
         $faker = Faker::create();
-
+        $id = 0;
         for ($i = 0; $i < $totalPosts / $batchSize; $i++) {
             $posts = [];
             for ($j = 0; $j < $batchSize; $j++) {
                 $posts[] = [
+                    'id' => ++$id,
                     'title' => $faker->sentence(),
                     'excerpt' => $faker->text(100),
                     'description' => $faker->paragraph(3, true),
@@ -37,13 +39,8 @@ class PostSeeder extends Seeder
                     'updated_at' => now(),
                 ];
             }
-
-            // Insert posts in bulk to the database
             Post::insert($posts);
-            // Fetch the newly inserted posts and bulk index them in Elasticsearch
-            $recentPosts = Post::latest()->take($batchSize)->get();
-            $recentPosts->searchable();  // Bulk index in Elasticsearch
-
+            app(ElasticsearchService::class)->bulkIndex('posts' , $posts);
             echo "Inserted and indexed " . (($i + 1) * $batchSize) . " posts...\n";
         }
     }

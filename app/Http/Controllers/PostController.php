@@ -2,11 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ElasticsearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
+
+    protected $elasticsearch;
+
+    public function __construct(ElasticsearchService $elasticsearch)
+    {
+        $this->elasticsearch = $elasticsearch;
+    }
+    public function search(Request $request)
+    {
+        $query = 'Tempore iste dolor';
+
+        // Define the fields you want to search across
+        $fields = ['title', 'excerpt' , 'description', 'meta_title', 'meta_description', 'keywords'];
+
+        $results = $this->elasticsearch->searchAllColumns('posts', $query, $fields);
+
+        // Extracting hits from Elasticsearch response
+        $hits = $results['hits']['hits'] ?? [];
+
+        return response()->json($hits);
+    }
     public function store(Request $request)
     {
         $validated = $request->validate([
